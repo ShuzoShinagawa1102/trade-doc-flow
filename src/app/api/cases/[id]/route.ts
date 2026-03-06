@@ -4,10 +4,11 @@ import { getCaseById, updateCaseStatus, createAuditEvent } from '@/lib/db'
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const caseDetail = getCaseById(params.id)
+    const { id } = await params
+    const caseDetail = getCaseById(id)
     if (!caseDetail) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 })
     }
@@ -20,9 +21,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const { status, actor, reason } = body
 
@@ -30,17 +32,17 @@ export async function PATCH(
       return NextResponse.json({ error: 'status is required' }, { status: 400 })
     }
 
-    const existing = getCaseById(params.id)
+    const existing = getCaseById(id)
     if (!existing) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 })
     }
 
     const now = new Date().toISOString()
-    updateCaseStatus(params.id, status, now)
+    updateCaseStatus(id, status, now)
 
     createAuditEvent({
       id: uuidv4(),
-      case_id: params.id,
+      case_id: id,
       event_type: 'StatusChanged',
       description: `ステータスが ${status} に変更されました${reason ? ': ' + reason : ''}`,
       actor: actor || 'システム',

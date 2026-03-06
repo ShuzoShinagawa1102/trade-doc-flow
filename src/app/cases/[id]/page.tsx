@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import type { CaseDetail, CaseStatus, DecisionType } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import EvidenceCompleteness from '@/components/EvidenceCompleteness'
@@ -43,7 +44,9 @@ const AUDIT_EVENT_ICONS: Record<string, string> = {
   DecisionMade: '✅',
 }
 
-export default function CaseDetailPage({ params }: { params: { id: string } }) {
+export default function CaseDetailPage() {
+  const params = useParams<{ id: string }>()
+  const caseId = params.id
   const [caseData, setCaseData] = useState<CaseDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeEvidenceForm, setActiveEvidenceForm] = useState<string | null>(null)
@@ -56,7 +59,7 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
 
   const fetchCase = useCallback(async () => {
     try {
-      const res = await fetch(`/api/cases/${params.id}`)
+      const res = await fetch(`/api/cases/${caseId}`)
       if (res.ok) {
         const data = await res.json()
         setCaseData(data)
@@ -66,14 +69,14 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false)
     }
-  }, [params.id])
+  }, [caseId])
 
   useEffect(() => { fetchCase() }, [fetchCase])
 
   async function handleStatusTransition(newStatus: CaseStatus) {
     setTransitionLoading(true)
     try {
-      await fetch(`/api/cases/${params.id}`, {
+      await fetch(`/api/cases/${caseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, actor: '担当者' }),
@@ -87,7 +90,7 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
   async function handleEvidenceSubmit(requirementId: string) {
     setSubmittingEvidence(true)
     try {
-      await fetch(`/api/cases/${params.id}/evidence`, {
+      await fetch(`/api/cases/${caseId}/evidence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...evidenceForm, requirement_id: requirementId }),
@@ -104,7 +107,7 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
     if (!decisionForm.decision) return
     setSubmittingDecision(true)
     try {
-      await fetch(`/api/cases/${params.id}/decision`, {
+      await fetch(`/api/cases/${caseId}/decision`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(decisionForm),

@@ -10,9 +10,10 @@ const DECISION_STATUS_MAP: Record<string, string> = {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const { decision, decided_by, reason } = body
 
@@ -20,7 +21,7 @@ export async function POST(
       return NextResponse.json({ error: 'Valid decision (Approve/Reject/Escalate) is required' }, { status: 400 })
     }
 
-    const existing = getCaseById(params.id)
+    const existing = getCaseById(id)
     if (!existing) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 })
     }
@@ -28,12 +29,12 @@ export async function POST(
     const newStatus = DECISION_STATUS_MAP[decision]
     const now = new Date().toISOString()
 
-    updateCaseStatus(params.id, newStatus, now)
+    updateCaseStatus(id, newStatus, now)
 
     const decisionLabel = decision === 'Approve' ? '承認' : decision === 'Reject' ? '却下' : 'エスカレーション'
     createAuditEvent({
       id: uuidv4(),
-      case_id: params.id,
+      case_id: id,
       event_type: 'DecisionMade',
       description: `案件が${decisionLabel}されました${reason ? ': ' + reason : ''}`,
       actor: decided_by || 'システム',
